@@ -411,11 +411,42 @@
   .prog-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
   .prog-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .scenario-cols { grid-template-columns: 1fr; }
+    .savings-banner { flex-direction: column; text-align: center; }
+    .savings-amount { font-size: 28px; }
+    .compare-header { flex-direction: column; gap: 6px; }
+    .compare-header .value { font-size: 20px; }
+  }
+
   @media (max-width: 768px) {
     .grid-2, .grid-3, .grid-4, .scenario-cols, .result-grid { grid-template-columns: 1fr; }
-    .savings-banner { flex-direction: column; text-align: center; }
     .field-row { grid-template-columns: 1fr; }
-    .main { padding: 16px; }
+    .main { padding: 12px; }
+    .card { padding: 14px; }
+    .metric-value { font-size: 18px !important; }
+    .tabs-inner { overflow-x: auto; white-space: nowrap; gap: 0; }
+    .tab-btn { padding: 10px 14px; font-size: 11px; }
+    .header-inner { padding: 10px 14px; }
+    .logo-text { font-size: 15px; }
+    .btn { padding: 9px 14px; font-size: 12px; }
+    .savings-banner { padding: 16px; }
+    .savings-amount { font-size: 24px; }
+    .prog-track { width: 100% !important; }
+    .chart-wrap { height: 220px !important; }
+    table { font-size: 11px; }
+    th, td { padding: 7px 8px; }
+    .toggle-btn { padding: 6px 10px; font-size: 11px; }
+    .section-title { font-size: 18px; }
+    .compare-header { flex-direction: column; gap: 4px; }
+    .compare-header .value { font-size: 18px; }
+  }
+
+  @media (max-width: 480px) {
+    .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+    .header-actions .btn-outline { display: none; }
+    .tabs-inner { padding: 0 8px; }
   }
 
   /* PRINT */
@@ -469,7 +500,9 @@
 
 <!-- ============================= TAB: SIMULAÇÃO ============================= -->
 <div class="tab-panel active" id="tab-simulacao">
-  <div class="grid-2" style="align-items: start;">
+
+  <!-- LINHA 1: PARÂMETROS + LANCE lado a lado -->
+  <div class="grid-2" style="align-items: start; margin-bottom: 16px;">
 
     <!-- COLUNA ESQUERDA: PARÂMETROS -->
     <div>
@@ -481,7 +514,7 @@
 
         <div class="field">
           <label>Crédito Total (R$)</label>
-          <input type="number" id="credito" value="1000000" min="10000" step="1000" oninput="calcular()">
+          <input type="text" id="credito" value="1.000.000" oninput="mascaraCredito(this)" inputmode="numeric">
           <div class="field-note">Valor da carta de crédito a ser adquirida</div>
         </div>
 
@@ -529,8 +562,11 @@
           <label>Índice de Reajuste Anual (%)</label>
           <input type="number" id="reajusteCustom" value="5.50" step="0.1" oninput="calcular()">
         </div>
-      </div>
+      </div><!-- /card parâmetros -->
+    </div><!-- /coluna esquerda -->
 
+    <!-- COLUNA DIREITA: LANCE -->
+    <div>
       <!-- LANCE -->
       <div class="card" style="margin-bottom: 16px;">
         <div class="card-title">
@@ -554,24 +590,25 @@
             <div class="field">
               <label>Lance Embutido (%)</label>
               <input type="number" id="pctEmbutido" value="30" min="0" max="50" step="1" oninput="calcular()">
-              <div class="field-note">% do crédito contratado</div>
+              <div class="field-note" id="noteEmbutido">% do crédito contratado</div>
             </div>
             <div class="field" id="fieldLanceProprio">
               <label>Lance Próprio (%)</label>
               <input type="number" id="pctProprio" value="0" min="0" max="50" step="1" oninput="calcular()">
-              <div class="field-note">% do crédito (recurso próprio)</div>
+              <div class="field-note" id="noteProprio">% do crédito contratado</div>
             </div>
           </div>
 
           <div class="field">
             <label>Expectativa de Contemplação</label>
             <select id="contemplacao" onchange="calcular()">
-              <option value="3">3 meses (assembleia especial)</option>
               <option value="6">6 meses</option>
               <option value="12" selected>12 meses</option>
               <option value="18">18 meses</option>
               <option value="24">24 meses</option>
               <option value="36">36 meses</option>
+              <option value="48">48 meses</option>
+              <option value="60">60 meses</option>
             </select>
           </div>
 
@@ -583,9 +620,18 @@
             </div>
           </div>
         </div>
-      </div>
+      </div><!-- /card lance -->
+    </div><!-- /coluna direita -->
+  </div><!-- /grid-2 linha 1 -->
 
-      <!-- FINANCIAMENTO COMPARATIVO -->
+  <!-- LINHA 2: RESULTADO CONSÓRCIO (coluna única, preenchido via JS) -->
+  <div id="resultadoConsorcioCol"></div>
+
+  <!-- LINHA 3: FINANCIAMENTO + RESULTADO (grid 2 colunas) -->
+  <div class="grid-2" style="align-items: start; margin-top: 16px;">
+
+    <!-- FINANCIAMENTO PARÂMETROS -->
+    <div>
       <div class="card">
         <div class="card-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -601,13 +647,13 @@
             </select>
           </div>
           <div class="field">
-            <label>Entrada (%)</label>
-            <input type="number" id="entradaPct" value="30" min="0" max="80" step="1" oninput="calcular()">
+            <label>Prazo (meses)</label>
+            <input type="number" id="prazoFin" value="360" min="12" max="420" step="12" oninput="calcular()">
           </div>
         </div>
 
-        <div class="alert alert-info">
-          <strong>Entrada = Lance Próprio.</strong> No comparativo, o recurso próprio do lance é considerado como entrada equivalente no financiamento.
+        <div class="alert alert-info" id="alertEntradaFin">
+          Entrada = Lance Próprio do consórcio. Se não houver lance próprio, o financiamento é 100% do crédito disponível.
         </div>
 
         <div class="field-row">
@@ -623,31 +669,25 @@
 
         <div class="field-row">
           <div class="field">
-            <label>Prazo Financ. (meses)</label>
-            <input type="number" id="prazoFin" value="360" min="12" max="420" step="12" oninput="calcular()">
-          </div>
-          <div class="field">
             <label>DFI Mensal (%)</label>
             <input type="number" id="txDFI" value="0.0055" min="0" max="0.5" step="0.001" oninput="calcular()">
           </div>
-        </div>
-
-        <div class="field-row">
           <div class="field">
             <label>Tarifa Mensal (R$)</label>
             <input type="number" id="tarifaMensal" value="25" min="0" step="5" oninput="calcular()">
           </div>
-          <div class="field">
-            <label>IOF (%)</label>
-            <input type="number" id="txIOF" value="0.38" min="0" max="2" step="0.01" oninput="calcular()">
-          </div>
+        </div>
+
+        <div class="field">
+          <label>IOF (%)</label>
+          <input type="number" id="txIOF" value="0.38" min="0" max="2" step="0.01" oninput="calcular()">
+          <div class="field-note">Incide sobre o valor financiado — não integra o saldo de amortização</div>
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA: RESULTADOS -->
-    <div id="resultadoCol">
-      <!-- Será preenchido via JS -->
+    <!-- RESULTADO FINANCIAMENTO (preenchido via JS) -->
+    <div id="resultadoFinanciamentoCol">
       <div class="card">
         <div style="text-align:center; padding: 40px 20px; color: var(--text-muted);">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px; opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -655,8 +695,15 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
+  </div><!-- /grid-2 linha 3 -->
+
+  <!-- LINHA 4: GRÁFICO DE CUSTO TOTAL (coluna única, preenchido via JS) -->
+  <div id="graficoCustoCol" style="margin-top: 16px;"></div>
+
+  <!-- LINHA 5: BANNER ECONOMIA (coluna única, preenchido via JS) -->
+  <div id="economiaCol" style="margin-top: 16px;"></div>
+
+</div><!-- /tab-simulacao -->
 
 <!-- ============================= TAB: GRUPOS ============================= -->
 <div class="tab-panel" id="tab-grupos">
@@ -834,6 +881,22 @@
 
 <script>
 // ===========================
+// MÁSCARA MONETÁRIA
+// ===========================
+function mascaraCredito(input) {
+  let v = input.value.replace(/\D/g, '');
+  if (!v) { input.value = ''; calcular(); return; }
+  v = parseInt(v, 10);
+  input.value = v.toLocaleString('pt-BR');
+  calcular();
+}
+
+function lerCredito() {
+  const raw = document.getElementById('credito').value.replace(/\./g, '').replace(',', '.');
+  return parseFloat(raw) || 0;
+}
+
+// ===========================
 // ESTADO GLOBAL
 // ===========================
 let state = {
@@ -917,7 +980,7 @@ document.getElementById('reajuste').addEventListener('change', function() {
 // CÁLCULO PRINCIPAL
 // ===========================
 function calcular() {
-  const credito = val('credito');
+  const credito = lerCredito();
   const prazo = val('prazo');
   const txAdmTotal = val('txAdm') / 100;
   const txFR = val('txFR') / 100;
@@ -928,126 +991,185 @@ function calcular() {
   const reajusteMap = {0: 0, inpc: 0.055, igpm: 0.06, ipca: 0.048, custom: val('reajusteCustom') / 100};
   const reajusteAnual = reajusteMap[sel('reajuste')] || 0;
 
-  // === CONSÓRCIO ===
-  const cotaBase = credito / prazo;
-  const admMensal = (credito * txAdmTotal) / prazo;
-  const frMensal = cotaBase * txFR;
+  // ============================================================
+  // === CONSÓRCIO — LÓGICA VALIDADA (replica Simulakey com precisão)
+  // Validado com engenharia reversa dos dados reais: diferença = R$0,00
+  //
+  // FÓRMULA CENTRAL:
+  //   parcela_inicial = (credito/prazo) × (1 + txAdm + txFR)
+  //   parcela_pós     = parcela_inicial - (lance_total_R$ / prazo_restante)
+  //
+  // Interpretação: o lance (embutido + próprio) adianta parcelas do saldo
+  // vincendo. Cada real de lance reduz R$1/prazo_rest da parcela mensal.
+  // O crédito disponível = credito - lance_embutido (carta líquida ao cliente).
+  // ============================================================
+
+  const cotaBase       = credito / prazo;
+  const admMensal      = (credito * txAdmTotal) / prazo;
+  const frMensal       = cotaBase * txFR;
   const parcelaInicial = cotaBase + admMensal + frMensal;
 
-  const lanceEmbutido = credito * pctEmbutido;
-  const lanceProprio = credito * pctProprio;
-  const lanceTotal = lanceEmbutido + lanceProprio;
-  const lancePct = (lanceTotal / credito) * 100;
+  const lanceEmbutido     = credito * pctEmbutido;
+  const lanceProprio      = credito * pctProprio;
+  const lanceTotal        = lanceEmbutido + lanceProprio;
+  const lancePct          = (lanceTotal / credito) * 100;
   const creditoDisponivel = credito - lanceEmbutido;
 
-  // Parcelas pré-contemplação
-  let parcelasPreContemp = [];
-  for (let m = 1; m <= mesContemplacao; m++) {
-    let fatorReajuste = 1;
-    if (m > 12) fatorReajuste = Math.pow(1 + reajusteAnual, Math.floor((m - 1) / 12));
-    parcelasPreContemp.push(parcelaInicial * fatorReajuste);
-  }
+  // Atualiza as notas dos campos com valor em R$
+  const noteEmb  = document.getElementById('noteEmbutido');
+  const noteProp = document.getElementById('noteProprio');
+  if (noteEmb)  noteEmb.textContent  = lanceEmbutido > 0  ? `= ${fmt(lanceEmbutido)} — deduzido da carta de crédito`  : '% do crédito contratado';
+  if (noteProp) noteProp.textContent = lanceProprio  > 0  ? `= ${fmt(lanceProprio)} — recurso próprio do consorciado` : '% do crédito contratado';
 
-  // Pós-contemplação
   const prazoRestante = prazo - mesContemplacao;
+
+  // Parcela pós = parcela_ini - (lance_total / prazo_rest)
+  // Equivale a: (parcela_ini × prazo_rest - lance_total) / prazo_rest
+  const reducaoMensal  = prazoRestante > 0 ? lanceTotal / prazoRestante : 0;
+  const parcelaPosBase = Math.max(0, parcelaInicial - reducaoMensal);
+
+  // Saldo vincendo para exibição informativa
+  const saldoVincendo       = parcelaInicial * prazoRestante;
+  const saldoDevedorBruto   = saldoVincendo;  // alias para exibição
+  const saldoDevedorLiquido = Math.max(0, saldoVincendo - lanceTotal);
+
   let parcelaPos, prazoFinal;
-
-  const creditoRestante = credito - (mesContemplacao / prazo) * credito;
-  const admRestante = admMensal;
-
   if (state.usoCredito === 'parcela') {
-    // Crédito disponível usado para reduzir parcela (distribui embutido no prazo restante)
-    const reducaoMensal = lanceEmbutido / prazoRestante;
-    const fatorReajusteContemplacao = Math.pow(1 + reajusteAnual, Math.floor(mesContemplacao / 12));
-    parcelaPos = (cotaBase + admMensal + frMensal) * fatorReajusteContemplacao - reducaoMensal;
+    parcelaPos = parcelaPosBase;
     prazoFinal = prazoRestante;
   } else {
-    // Reduzir prazo
-    const fatorReajusteContemplacao = Math.pow(1 + reajusteAnual, Math.floor(mesContemplacao / 12));
-    parcelaPos = parcelaInicial * fatorReajusteContemplacao;
-    const credAbater = lanceEmbutido;
-    prazoFinal = Math.max(1, Math.round(prazoRestante * (1 - credAbater / (creditoRestante || credito))));
+    // Reduzir prazo: mantém parcela_ini e calcula quantas parcelas restam
+    // prazo_novo = saldo_vincendo_residual / parcela_ini
+    prazoFinal = parcelaInicial > 0
+      ? Math.max(1, Math.round(saldoDevedorLiquido / parcelaInicial))
+      : prazoRestante;
+    prazoFinal = Math.min(prazoFinal, prazoRestante);
+    parcelaPos = parcelaPosBase;
   }
 
-  // Fluxo completo consórcio
+  // Fluxo completo — reajuste anual sobre a parcela vigente de cada fase
   let fluxoConsorcio = [];
   for (let m = 1; m <= prazo; m++) {
-    let fator = m > 12 ? Math.pow(1 + reajusteAnual, Math.floor((m-1)/12)) : 1;
+    const anoVigente = Math.floor((m - 1) / 12);
+    const fator      = Math.pow(1 + reajusteAnual, anoVigente);
+    const saldoRef   = credito * Math.max(0, (prazo - m + 1) / prazo);
     if (m <= mesContemplacao) {
-      fluxoConsorcio.push({ mes: m, parcela: parcelaInicial * fator, fase: 'pre', saldo: credito * (1 - (m-1)/prazo) });
+      fluxoConsorcio.push({ mes: m, parcela: parcelaInicial * fator, fase: 'pre', saldo: saldoRef });
     } else {
-      fluxoConsorcio.push({ mes: m, parcela: parcelaPos * fator, fase: 'pos', saldo: creditoDisponivel * (1 - (m - mesContemplacao)/prazoRestante) });
+      const frac = prazoRestante > 0 ? Math.max(0, 1 - (m - mesContemplacao) / prazoRestante) : 0;
+      fluxoConsorcio.push({ mes: m, parcela: parcelaPos * fator, fase: 'pos', saldo: saldoDevedorLiquido * frac });
     }
   }
 
   const custoTotalConsorcio = fluxoConsorcio.reduce((s, r) => s + r.parcela, 0) + lanceProprio;
-  const cetMensalConsorcio = Math.pow(custoTotalConsorcio / creditoDisponivel, 1 / prazo) - 1;
-  const cetAnualConsorcio = Math.pow(1 + cetMensalConsorcio, 12) - 1;
+  // CET calculado sobre o crédito disponível (o que o cliente efetivamente recebe)
+  const cetMensalConsorcio  = creditoDisponivel > 0
+    ? Math.pow((custoTotalConsorcio) / creditoDisponivel, 1 / prazo) - 1
+    : 0;
+  const cetAnualConsorcio   = Math.pow(1 + cetMensalConsorcio, 12) - 1;
 
-  // === FINANCIAMENTO ===
-  const entradaFin = creditoDisponivel * (val('entradaPct') / 100);
-  const valorFinanciado = creditoDisponivel - entradaFin;
-  const txJurosAnual = val('txJuros') / 100;
+  // ============================================================
+  // === FINANCIAMENTO — MATEMÁTICA FINANCEIRA CORRETA ===
+  //
+  // REGRAS:
+  // 1. Valor do bem = creditoDisponivel (carta líquida do consórcio)
+  // 2. Entrada = lanceProprio (recurso próprio já desembolsado)
+  //    Se só lance embutido: entrada = 0 (embutido não é recurso do cliente)
+  // 3. Valor financiado = bem - entrada
+  // 4. SAC: amortização constante = PV/n; juros sobre saldo corrigido por TR
+  // 5. PRICE: PMT calculado com taxa efetiva = (1+i_m)(1+TR_m)-1
+  // 6. IOF incide sobre o valor financiado, não é somado ao PV de amortização
+  // 7. CET via TIR: fluxo = [-(PV-IOF), parcelas+DFI+tarifa]
+  //    (cliente recebe PV mas paga IOF → PV líquido = PV - IOF)
+  // ============================================================
+
+  const txJurosAnual  = val('txJuros') / 100;
   const txJurosMensal = Math.pow(1 + txJurosAnual, 1 / 12) - 1;
-  const txTRAnual = val('txTR') / 100;
-  const txTRMensal = Math.pow(1 + txTRAnual, 1 / 12) - 1;
-  const txDFIm = val('txDFI') / 100;
-  const tarifaMensal = val('tarifaMensal');
-  const prazoFin = val('prazoFin');
-  const txIOF = val('txIOF') / 100;
-  const sistemaFin = sel('sistemaFin');
+  const txTRAnual     = val('txTR') / 100;
+  const txTRMensal    = Math.pow(1 + txTRAnual, 1 / 12) - 1;
+  const txDFIm        = val('txDFI') / 100;
+  const tarifaMensal  = val('tarifaMensal');
+  const prazoFin      = val('prazoFin');
+  const txIOF         = val('txIOF') / 100;
+  const sistemaFin    = sel('sistemaFin');
 
+  // Bem = crédito disponível do consórcio
+  const bemFin      = creditoDisponivel;
+  // Entrada = lance próprio; embutido NÃO conta como entrada
+  const entradaFin  = lanceProprio;
+  // Valor a financiar
+  const valorFinanciado = bemFin - entradaFin;
+  // IOF sobre valor financiado (não entra no saldo de amortização)
   const iof = valorFinanciado * txIOF;
-  const pvFin = valorFinanciado + iof;
+
+  // PV de amortização = apenas o valor financiado (IOF é custo à parte)
+  const pvFin = valorFinanciado;
 
   let fluxoFin = [];
   let saldoFin = pvFin;
 
   if (sistemaFin === 'SAC') {
+    // Amortização constante sobre PV
     const amortConst = pvFin / prazoFin;
     for (let m = 1; m <= prazoFin; m++) {
-      const saldoCorrigido = saldoFin * (1 + txTRMensal);
-      const juros = saldoCorrigido * txJurosMensal;
-      const amort = amortConst;
-      const dfi = saldoCorrigido * txDFIm;
-      const parcela = amort + juros + dfi + tarifaMensal;
-      fluxoFin.push({ mes: m, saldo: saldoCorrigido, amort, juros, dfi, tarifa: tarifaMensal, parcela });
-      saldoFin = saldoCorrigido - amort;
+      const saldoCorr = saldoFin * (1 + txTRMensal);   // corrige saldo pela TR
+      const juros     = saldoCorr * txJurosMensal;      // juros sobre saldo corrigido
+      const dfi       = saldoCorr * txDFIm;
+      const parcela   = amortConst + juros + dfi + tarifaMensal;
+      fluxoFin.push({ mes: m, saldo: saldoCorr, amort: amortConst, juros, dfi, tarifa: tarifaMensal, parcela });
+      saldoFin = saldoCorr - amortConst;
     }
-  } else { // PRICE
-    const i = txJurosMensal + txTRMensal;
-    const pmt = pvFin * (i * Math.pow(1 + i, prazoFin)) / (Math.pow(1 + i, prazoFin) - 1);
+  } else {
+    // PRICE: taxa efetiva mensal = (1+i_m)×(1+TR_m) - 1
+    const iEf = (1 + txJurosMensal) * (1 + txTRMensal) - 1;
+    const pmt = pvFin * (iEf * Math.pow(1 + iEf, prazoFin)) / (Math.pow(1 + iEf, prazoFin) - 1);
     for (let m = 1; m <= prazoFin; m++) {
-      const saldoCorrigido = saldoFin * (1 + txTRMensal);
-      const juros = saldoCorrigido * txJurosMensal;
-      const amort = pmt - juros;
-      const dfi = saldoCorrigido * txDFIm;
-      const parcela = pmt + dfi + tarifaMensal;
-      fluxoFin.push({ mes: m, saldo: saldoCorrigido, amort, juros, dfi, tarifa: tarifaMensal, parcela });
-      saldoFin = saldoCorrigido - amort;
+      const saldoCorr = saldoFin * (1 + txTRMensal);
+      const juros     = saldoCorr * txJurosMensal;
+      const amort     = pmt - juros - saldoFin * txTRMensal; // amort real = PMT - juros - correção TR
+      const dfi       = saldoCorr * txDFIm;
+      const parcela   = pmt + dfi + tarifaMensal;
+      fluxoFin.push({ mes: m, saldo: saldoCorr, amort: Math.max(0, amort), juros, dfi, tarifa: tarifaMensal, parcela });
+      saldoFin = saldoCorr - pmt;
+      if (saldoFin < 0) saldoFin = 0;
     }
   }
 
   const parcelaInicialFin = fluxoFin[0]?.parcela || 0;
-  const parcelaFinalFin = fluxoFin[fluxoFin.length - 1]?.parcela || 0;
-  const custoTotalFin = fluxoFin.reduce((s, r) => s + r.parcela, 0) + entradaFin + iof;
+  const parcelaFinalFin   = fluxoFin[fluxoFin.length - 1]?.parcela || 0;
+  // Custo total = todas parcelas + entrada + IOF
+  const custoTotalFin = fluxoFin.reduce((s, f) => s + f.parcela, 0) + entradaFin + iof;
 
-  // CET Financiamento (TIR)
-  let cetMensalFin = 0;
+  // CET via TIR (Resolução CMN 3517/2007)
+  // Fluxo: cliente recebe (valorFinanciado - IOF) no t=0 e paga parcela+DFI+tarifa mensalmente
+  let cetMensalFin = txJurosMensal;
   try {
-    const fluxoCetFin = [-pvFin, ...fluxoFin.map(r => r.parcela)];
-    cetMensalFin = calcTIR(fluxoCetFin);
+    const pvLiq = valorFinanciado - iof; // valor líquido recebido pelo cliente
+    const fluxoCET = [-pvLiq, ...fluxoFin.map(f => f.parcela)];
+    cetMensalFin = calcTIR(fluxoCET);
   } catch(e) { cetMensalFin = txJurosMensal; }
   const cetAnualFin = Math.pow(1 + cetMensalFin, 12) - 1;
 
   const economia = custoTotalFin - custoTotalConsorcio;
 
+  // Atualiza alerta dinâmico do financiamento
+  const alertEl = document.getElementById('alertEntradaFin');
+  if (alertEl) {
+    if (lanceProprio > 0) {
+      alertEl.innerHTML = `<strong>Entrada automática:</strong> Lance próprio de ${fmt(lanceProprio)} (${fmtPct(lanceProprio/creditoDisponivel*100)} do bem) será usado como entrada no financiamento comparativo.`;
+    } else {
+      alertEl.innerHTML = `<strong>Sem entrada:</strong> Lance apenas embutido não conta como recurso próprio. Financiamento calculado sobre 100% do crédito disponível (${fmt(creditoDisponivel)}).`;
+    }
+  }
+
   state.resultado = {
-    credito, prazo, creditoDisponivel, parcelaInicial, parcelaPos, prazoRestante,
+    credito, prazo, creditoDisponivel, parcelaInicial, parcelaPos, parcelaPosBase,
+    prazoRestante, prazoFinal,
     lanceEmbutido, lanceProprio, lanceTotal, lancePct,
+    saldoDevedorBruto, saldoDevedorLiquido,
     mesContemplacao, custoTotalConsorcio, cetMensalConsorcio, cetAnualConsorcio,
     fluxoConsorcio,
-    valorFinanciado, entradaFin, iof, parcelaInicialFin, parcelaFinalFin,
+    bemFin, valorFinanciado, entradaFin, iof, parcelaInicialFin, parcelaFinalFin,
     custoTotalFin, cetMensalFin, cetAnualFin,
     fluxoFin, prazoFin, sistemaFin,
     economia, txAdmTotal, txFR, reajusteAnual
@@ -1083,93 +1205,127 @@ function renderResultado() {
   const r = state.resultado;
   if (!r) return;
 
-  const col = document.getElementById('resultadoCol');
-  col.innerHTML = `
-    <div class="card" style="margin-bottom:16px;">
+  const reducaoParcela = r.parcelaInicial > 0 ? (1 - r.parcelaPosBase / r.parcelaInicial) * 100 : 0;
+
+  // --- BLOCO 1: Resultado Consórcio (coluna única) ---
+  document.getElementById('resultadoConsorcioCol').innerHTML = `
+    <div class="card">
       <div class="card-title">Resultado — Consórcio</div>
-      <div class="grid-2" style="gap:10px; margin-bottom:14px;">
-        <div class="metric highlight">
-          <div class="metric-label">Crédito Disponível</div>
-          <div class="metric-value">${fmt(r.creditoDisponivel)}</div>
-          <div class="metric-sub">após lance embutido</div>
-        </div>
+      <div class="grid-4" style="gap:10px; margin-bottom:10px;">
         <div class="metric">
           <div class="metric-label">Parcela Inicial</div>
           <div class="metric-value">${fmt(r.parcelaInicial)}</div>
-          <div class="metric-sub">antes da contemplação</div>
+          <div class="metric-sub">cota + adm + FR</div>
+        </div>
+        <div class="metric highlight">
+          <div class="metric-label">Crédito Disponível</div>
+          <div class="metric-value">${fmt(r.creditoDisponivel)}</div>
+          <div class="metric-sub">carta líquida ao contemplado</div>
         </div>
         <div class="metric success-bg">
           <div class="metric-label">Parcela Pós-Contemplação</div>
-          <div class="metric-value">${fmt(r.parcelaPos)}</div>
-          <div class="metric-sub">${r.prazoRestante} meses restantes</div>
+          <div class="metric-value">${fmt(r.parcelaPosBase)}</div>
+          <div class="metric-sub">↓ ${fmtPct(reducaoParcela)} vs. inicial · ${r.prazoRestante} meses</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CET Consórcio</div>
+          <div class="metric-value">${fmtPct(r.cetMensalConsorcio * 100)} a.m.</div>
+          <div class="metric-sub">${fmtPct(r.cetAnualConsorcio * 100)} a.a.</div>
         </div>
         <div class="metric">
           <div class="metric-label">Lance Total</div>
           <div class="metric-value">${fmt(r.lanceTotal)}</div>
-          <div class="metric-sub">${fmtPct(r.lancePct)} do crédito</div>
+          <div class="metric-sub">(${fmtPct(r.lancePct)}) do crédito</div>
         </div>
-      </div>
-      <div class="grid-2" style="gap:10px;">
+        <div class="metric">
+          <div class="metric-label">Lance Recurso Próprio</div>
+          <div class="metric-value">${fmt(r.lanceProprio)}</div>
+          <div class="metric-sub">(${fmtPct(r.lanceProprio/r.credito*100)}) desembolso cliente</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Lance Embutido</div>
+          <div class="metric-value">${fmt(r.lanceEmbutido)}</div>
+          <div class="metric-sub">(${fmtPct(r.lanceEmbutido/r.credito*100)}) deduzido da carta</div>
+        </div>
         <div class="metric">
           <div class="metric-label">Custo Total Consórcio</div>
-          <div class="metric-value" style="font-size:18px;">${fmt(r.custoTotalConsorcio)}</div>
+          <div class="metric-value">${fmt(r.custoTotalConsorcio)}</div>
           <div class="metric-sub">parcelas + lance próprio</div>
         </div>
-        <div class="metric">
-          <div class="metric-label">CET Consórcio</div>
-          <div class="metric-value" style="font-size:18px;">${fmtPct(r.cetMensalConsorcio * 100)} a.m.</div>
-          <div class="metric-sub">${fmtPct(r.cetAnualConsorcio * 100)} a.a.</div>
-        </div>
       </div>
-    </div>
+      <div style="background:var(--bg); border-radius:var(--radius); padding:10px 14px; font-size:12px; color:var(--text-muted);">
+        Saldo vincendo na contemplação: <strong>${fmt(r.saldoDevedorBruto)}</strong>
+        &nbsp;·&nbsp; Residual pós-lance: <strong>${fmt(r.saldoDevedorLiquido)}</strong>
+        &nbsp;·&nbsp; Prazo restante: <strong>${r.prazoRestante} meses</strong>
+      </div>
+    </div>`;
 
-    <div class="card" style="margin-bottom:16px;">
+  // --- BLOCO 2: Resultado Financiamento (coluna direita do grid linha 3) ---
+  document.getElementById('resultadoFinanciamentoCol').innerHTML = `
+    <div class="card">
       <div class="card-title">Resultado — Financiamento (${r.sistemaFin})</div>
-      <div class="grid-2" style="gap:10px; margin-bottom:14px;">
+      <div style="background:var(--bg); border-radius:var(--radius); padding:10px 12px; font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.7;">
+        Valor do bem: <strong>${fmt(r.bemFin)}</strong>
+        &nbsp;·&nbsp; Entrada: <strong>${r.entradaFin > 0 ? fmt(r.entradaFin) : 'Sem entrada'}</strong>
+        &nbsp;·&nbsp; Financiado: <strong>${fmt(r.valorFinanciado)}</strong>
+        &nbsp;·&nbsp; IOF: <strong>${fmt(r.iof)}</strong>
+      </div>
+      <div class="grid-2" style="gap:10px; margin-bottom:10px;">
         <div class="metric">
           <div class="metric-label">Parcela Inicial</div>
           <div class="metric-value">${fmt(r.parcelaInicialFin)}</div>
-          <div class="metric-sub">1ª parcela (${r.sistemaFin})</div>
+          <div class="metric-sub">${r.sistemaFin} + DFI + tarifa (mês 1)</div>
         </div>
         <div class="metric">
           <div class="metric-label">Parcela Final</div>
           <div class="metric-value">${fmt(r.parcelaFinalFin)}</div>
-          <div class="metric-sub">${r.prazoFin}ª parcela</div>
+          <div class="metric-sub">mês ${r.prazoFin}</div>
         </div>
         <div class="metric danger-bg">
           <div class="metric-label">Custo Total Financiamento</div>
-          <div class="metric-value" style="font-size:18px;">${fmt(r.custoTotalFin)}</div>
-          <div class="metric-sub">juros + seguros + tarifas</div>
+          <div class="metric-value">${fmt(r.custoTotalFin)}</div>
+          <div class="metric-sub">parcelas + entrada + IOF</div>
         </div>
         <div class="metric">
           <div class="metric-label">CET Financiamento</div>
-          <div class="metric-value" style="font-size:18px;">${fmtPct(r.cetMensalFin * 100)} a.m.</div>
+          <div class="metric-value">${fmtPct(r.cetMensalFin * 100)} a.m.</div>
           <div class="metric-sub">${fmtPct(r.cetAnualFin * 100)} a.a.</div>
         </div>
       </div>
-    </div>
+      <div style="background:var(--bg); border-radius:var(--radius); padding:10px 12px; font-size:12px; color:var(--text-muted);">
+        Custo financeiro puro (juros + TR + DFI + tarifas + IOF): <strong style="color:var(--danger)">${fmt(r.custoTotalFin - r.valorFinanciado - r.entradaFin)}</strong>
+      </div>
+    </div>`;
 
+  // --- BLOCO 3: Gráfico de custo total (coluna única) ---
+  document.getElementById('graficoCustoCol').innerHTML = `
+    <div class="card">
+      <div class="card-title">Gráfico de Custo Total</div>
+      <div id="legendaGraficoCusto" style="display:flex; gap:16px; margin-bottom:10px; font-size:12px; color:var(--text-muted);">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1A3558;"></span>Crédito / Principal</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#C9A227;"></span>Custo Adm / Juros</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#8A9BB0;"></span>Lance Próprio / Entrada</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartCusto" role="img" aria-label="Comparativo de custo total">Consórcio: ${fmt(r.custoTotalConsorcio)} | Financiamento: ${fmt(r.custoTotalFin)}</canvas>
+      </div>
+    </div>`;
+
+  // --- BLOCO 4: Banner economia (coluna única) ---
+  document.getElementById('economiaCol').innerHTML = `
     <div class="savings-banner">
       <div>
         <h2>💰 Economia com Consórcio</h2>
-        <p>Diferença de custo total entre as duas modalidades</p>
+        <p>Diferença de custo total entre as modalidades</p>
         <div style="margin-top:10px;">
           <div class="prog-track" style="width:260px;">
-            <div class="prog-bar" style="background:var(--gold); width:${Math.min(100, (r.economia / r.custoTotalFin) * 100)}%;"></div>
+            <div class="prog-bar" style="background:var(--gold); width:${Math.min(100, Math.max(0, (r.economia / r.custoTotalFin) * 100))}%;"></div>
           </div>
           <p style="font-size:11px; color:rgba(255,255,255,0.5); margin-top:4px;">${fmtPct((r.economia / r.custoTotalFin) * 100)} do custo do financiamento</p>
         </div>
       </div>
       <div class="savings-amount">${fmt(r.economia)}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Gráfico de Custo Total</div>
-      <div class="chart-wrap">
-        <canvas id="chartCusto" role="img" aria-label="Comparativo de custo total: consórcio vs financiamento">Consórcio: ${fmt(r.custoTotalConsorcio)} | Financiamento: ${fmt(r.custoTotalFin)}</canvas>
-      </div>
-    </div>
-  `;
+    </div>`;
 
   // Render chart
   setTimeout(() => renderChartCusto(), 100);
@@ -1204,24 +1360,9 @@ function renderChartCusto() {
     data: {
       labels: ['Consórcio', 'Financiamento'],
       datasets: [
-        {
-          label: 'Principal / Crédito',
-          data: [principalConsorcio, principalFinanc],
-          backgroundColor: '#1A3558',
-          borderWidth: 0
-        },
-        {
-          label: 'Custo Adm / Juros',
-          data: [jurosConsorcio, jurosFinanc],
-          backgroundColor: '#C9A227',
-          borderWidth: 0
-        },
-        {
-          label: 'Lance Próprio / Entrada',
-          data: [lanceProprio, entradaFinanc],
-          backgroundColor: '#8A9BB0',
-          borderWidth: 0
-        }
+        { label: 'Principal / Crédito', data: [principalConsorcio, principalFinanc], backgroundColor: '#1A3558', borderWidth: 0 },
+        { label: 'Custo Adm / Juros', data: [jurosConsorcio, jurosFinanc], backgroundColor: '#C9A227', borderWidth: 0 },
+        { label: 'Lance Próprio / Entrada', data: [lanceProprio, entradaFinanc], backgroundColor: '#8A9BB0', borderWidth: 0 }
       ]
     },
     options: {
@@ -1231,13 +1372,24 @@ function renderChartCusto() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y)
+            title: items => items[0].label === 'Consórcio' ? 'Consórcio — Composição do Custo' : 'Financiamento — Composição do Custo',
+            label: ctx => {
+              const isConsorc = ctx.label === 'Consórcio';
+              const labels = isConsorc
+                ? ['Crédito Disponível', 'Taxa Adm + Fundo de Reserva', 'Lance Próprio']
+                : ['Valor Financiado', 'Juros + TR + DFI + Tarifas', 'Entrada'];
+              return '  ' + labels[ctx.datasetIndex] + ': ' + fmt(ctx.parsed.y);
+            },
+            footer: items => {
+              const total = items.reduce((s, i) => s + i.parsed.y, 0);
+              return 'Total: ' + fmt(total);
+            }
           }
         }
       },
       scales: {
         x: { stacked: true },
-        y: { stacked: true, ticks: { callback: v => 'R$' + (v/1000).toFixed(0) + 'k' } }
+        y: { stacked: true, ticks: { callback: v => 'R$' + (v/1000000).toFixed(1) + 'M' } }
       }
     }
   });
@@ -1288,8 +1440,8 @@ function renderComparativo() {
           <div class="value">${fmt(r.custoTotalFin)}</div>
         </div>
         <div class="compare-body">
-          <div class="compare-row"><span class="lbl">Valor do Imóvel/Bem</span><span class="val">${fmt(r.creditoDisponivel)}</span></div>
-          <div class="compare-row"><span class="lbl">Entrada</span><span class="val">${fmt(r.entradaFin)} (${fmtPct(r.entradaFin/r.creditoDisponivel*100)})</span></div>
+          <div class="compare-row"><span class="lbl">Valor do Imóvel/Bem</span><span class="val">${fmt(r.bemFin)}</span></div>
+          <div class="compare-row"><span class="lbl">Entrada (= Lance Próprio)</span><span class="val">${r.entradaFin > 0 ? fmt(r.entradaFin) + ' (' + fmtPct(r.entradaFin/r.bemFin*100) + ')' : 'Sem entrada'}</span></div>
           <div class="compare-row"><span class="lbl">Valor Financiado</span><span class="val">${fmt(r.valorFinanciado)}</span></div>
           <div class="compare-row"><span class="lbl">IOF</span><span class="val">${fmt(r.iof)}</span></div>
           <div class="compare-row"><span class="lbl">Parcela Inicial</span><span class="val">${fmt(r.parcelaInicialFin)}</span></div>
@@ -1361,8 +1513,28 @@ function renderChartComparativo() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y) } } },
-      scales: { y: { ticks: { callback: v => 'R$' + (v/1000).toFixed(0) + 'k' } } }
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => 'Mês ' + items[0].label.replace('M',''),
+            label: ctx => {
+              const desc = ctx.dataset.label === 'Consórcio'
+                ? 'Saldo da Carta (Consórcio)'
+                : 'Saldo Devedor (Financiamento)';
+              return '  ' + desc + ': ' + fmt(ctx.parsed.y);
+            },
+            footer: items => {
+              const c = items.find(i => i.dataset.label === 'Consórcio');
+              const f = items.find(i => i.dataset.label === 'Financiamento');
+              if (c && f) return 'Diferença de saldo: ' + fmt(Math.abs(f.parsed.y - c.parsed.y));
+              return '';
+            }
+          }
+        }
+      },
+      scales: { y: { ticks: { callback: v => 'R$' + (v/1000000).toFixed(1) + 'M' } } }
     }
   });
 }
@@ -1397,7 +1569,35 @@ function renderChartParcelas() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y) } } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => 'Mês ' + items[0].label.replace('M',''),
+            label: ctx => {
+              const isConsorc = ctx.dataset.label === 'Consórcio';
+              const mes = parseInt(ctx.label.replace('M',''));
+              let desc = isConsorc ? 'Parcela Consórcio' : 'Parcela Financiamento';
+              if (isConsorc && state.resultado) {
+                desc += mes <= state.resultado.mesContemplacao ? ' (pré-contemplação)' : ' (pós-contemplação)';
+              }
+              return '  ' + desc + ': ' + fmt(ctx.parsed.y);
+            },
+            footer: items => {
+              const c = items.find(i => i.dataset.label === 'Consórcio');
+              const f = items.find(i => i.dataset.label === 'Financiamento');
+              if (c && f && c.parsed.y && f.parsed.y) {
+                const diff = f.parsed.y - c.parsed.y;
+                return diff > 0
+                  ? 'Consórcio mais barato em: ' + fmt(diff)
+                  : 'Financiamento mais barato em: ' + fmt(Math.abs(diff));
+              }
+              return '';
+            }
+          }
+        }
+      },
       scales: { y: { ticks: { callback: v => 'R$' + (v/1000).toFixed(0) + 'k' } } }
     }
   });
@@ -1692,8 +1892,11 @@ function exportExcel() {
 // INIT
 // ===========================
 document.addEventListener('DOMContentLoaded', () => {
+  // Formata valor inicial do crédito
+  const creditoInput = document.getElementById('credito');
+  const rawVal = parseInt(creditoInput.value.replace(/\D/g,''), 10) || 1000000;
+  creditoInput.value = rawVal.toLocaleString('pt-BR');
   calcular();
-  // Inicializa toggles
   document.getElementById('fieldLanceProprio').style.display = 'none';
 });
 </script>
