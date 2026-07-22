@@ -113,6 +113,9 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
+  /* Conteúdo exclusivo da impressão/PDF (oculto na tela) */
+  .print-only { display: none; }
+
   /* SECTION LABEL */
   .section-title {
     font-family: 'Playfair Display', serif;
@@ -461,20 +464,31 @@
 
     /* Ocultar elementos de navegação e controle */
     header, .tabs, .header-actions, .calc-btn,
-    #tab-grupos, #tab-comparativo, #tab-amortizacao, #tab-glossario,
     #btnExportExcel, .toggle-group, #alertEntradaFin,
-    #fieldReajusteCustom { display: none !important; }
+    #fieldReajusteCustom, #cardAdicionarGrupo, #amortFiltroCard { display: none !important; }
 
     /* Mostrar cabeçalho de impressão */
     #printHeader { display: block !important; }
 
-    /* Mostrar apenas aba simulação */
-    #tab-simulacao { display: block !important; }
+    /* Só entram no PDF as colunas de ações (excluir grupo) */
+    #tabelaGrupos th:last-child, #tabelaGrupos td:last-child { display: none !important; }
+
+    /* === CADA ETAPA É UMA ABA (.tab-panel): só imprime quem tiver dado cadastrado === */
+    .tab-panel { display: none !important; }
+    .tab-panel.print-section {
+      display: block !important;
+      page-break-before: always !important;
+      break-before: page !important;
+    }
+    /* Simulação é sempre a primeira etapa — sem quebra antes dela */
+    #tab-simulacao.print-section { page-break-before: avoid !important; break-before: avoid !important; }
+
+    .print-only { display: block !important; }
 
     body { background: #fff !important; font-size: 11px !important; margin: 0 !important; }
     .main { padding: 0 !important; max-width: 100% !important; }
 
-    /* === QUEBRAS DE PÁGINA POR SEÇÃO === */
+    /* === QUEBRAS DE PÁGINA POR SEÇÃO (dentro da aba Simulação) === */
     /* Parâmetros + Lance: página 1 (sem quebra antes) */
     #tab-simulacao > .grid-2:first-child { page-break-before: avoid; }
 
@@ -490,6 +504,27 @@
     /* Banner economia: junto ao gráfico (sem quebra) */
     #economiaCol { page-break-before: avoid; }
 
+    /* === COMPARATIVO: consórcio e financiamento lado a lado na mesma página === */
+    .scenario-cols {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+      margin-bottom: 10px !important;
+    }
+    .compare-card { break-inside: avoid !important; page-break-inside: avoid !important; }
+    .compare-header { flex-direction: row !important; gap: 6px !important; padding: 10px 12px !important; }
+    .compare-header h3 { font-size: 12px !important; }
+    .compare-header .value { font-size: 15px !important; }
+    .compare-body { padding: 8px 10px !important; }
+    .compare-row { padding: 4px 0 !important; font-size: 9px !important; }
+    .verdict { padding: 10px 14px !important; margin-bottom: 10px !important; break-inside: avoid !important; }
+    .verdict h2 { font-size: 13px !important; }
+    .verdict p { font-size: 10px !important; }
+
+    /* Amortização: usa a versão combinada (consórcio + financiamento) montada para impressão */
+    #amortContent { display: none !important; }
+    #amortPrintContent { display: block !important; }
+
     /* === CARDS: nunca quebram no meio === */
     .card {
       box-shadow: none !important;
@@ -502,7 +537,18 @@
 
     /* === GRIDS === */
     .grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; margin-bottom: 10px !important; }
+    .grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
     .grid-4 { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 7px !important; }
+
+    /* === TABELAS (Grupos/Cotas e Amortização) === */
+    .table-wrap { overflow: visible !important; }
+    table { font-size: 9px !important; }
+    th, td { padding: 4px 6px !important; }
+    .badge { padding: 2px 6px !important; font-size: 8px !important; }
+
+    /* === TÍTULOS DE SEÇÃO (Grupos, Comparativo, Amortização, Glossário) === */
+    .section-title { font-size: 15px !important; margin-bottom: 4px !important; }
+    .section-sub { font-size: 10px !important; margin-bottom: 10px !important; }
 
     /* === MÉTRICAS === */
     .metric { padding: 8px 10px !important; break-inside: avoid !important; }
@@ -611,6 +657,8 @@
 
 <!-- ============================= TAB: SIMULAÇÃO ============================= -->
 <div class="tab-panel active" id="tab-simulacao">
+
+  <h1 class="section-title print-only" style="margin-bottom:4px;">Simulação — Parâmetros e Resultado</h1>
 
   <!-- LINHA 1: PARÂMETROS + LANCE lado a lado -->
   <div class="grid-2" style="align-items: start; margin-bottom: 16px;">
@@ -833,7 +881,7 @@
     <p class="section-sub">Simule múltiplos grupos/cotas e visualize o consolidado da operação.</p>
   </div>
 
-  <div class="card" style="margin-bottom: 20px;">
+  <div class="card" style="margin-bottom: 20px;" id="cardAdicionarGrupo">
     <div class="card-title">Adicionar Grupo/Cota</div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; align-items: end;">
       <div class="field" style="margin:0;"><label>Nº Grupo</label><input type="text" id="gGrupo" placeholder="Ex: 3066"></div>
@@ -913,7 +961,7 @@
     <h1 class="section-title">Tabela de Amortização</h1>
     <p class="section-sub">Evolução mensal do saldo devedor e parcelas.</p>
   </div>
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card" style="margin-bottom:16px;" id="amortFiltroCard">
     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <div class="toggle-group" id="amortViewGroup">
         <button class="toggle-btn active" onclick="setAmortView('consorcio')">Consórcio</button>
@@ -929,6 +977,8 @@
   <div id="amortContent">
     <div class="alert alert-info">Execute a simulação na aba <strong>Simulação</strong> para ver a tabela de amortização.</div>
   </div>
+  <!-- Versão para impressão: consórcio e financiamento juntos, montada em renderAmortPrint() -->
+  <div id="amortPrintContent" class="print-only"></div>
 </div>
 
 <!-- ============================= TAB: GLOSSÁRIO ============================= -->
@@ -1813,6 +1863,70 @@ function renderAmort() {
   }
 }
 
+// Monta, para impressão, as tabelas de amortização de Consórcio e Financiamento
+// juntas (independente de qual das duas esteja selecionada na tela).
+function renderAmortPrint() {
+  const el = document.getElementById('amortPrintContent');
+  if (!el) return;
+  const r = state.resultado;
+  if (!r) { el.innerHTML = ''; return; }
+
+  const start = Math.max(1, parseInt(document.getElementById('amortStart').value) || 1);
+
+  function tabelaConsorcio() {
+    const fluxo = r.fluxoConsorcio;
+    const end = Math.min(fluxo.length, parseInt(document.getElementById('amortEnd').value) || 24);
+    let rows = '';
+    for (let i = start - 1; i < end; i++) {
+      const f = fluxo[i];
+      const classe = f.fase === 'pos' ? 'gold-row' : '';
+      rows += `<tr class="${classe}">
+        <td>${f.mes}</td>
+        <td>${f.fase === 'pos' ? '<span class="badge badge-green">Pós</span>' : '<span class="badge badge-navy">Pré</span>'}</td>
+        <td>${fmt(f.saldo)}</td>
+        <td style="font-weight:700;">${fmt(f.parcela)}</td>
+        <td>${f.mes === r.mesContemplacao ? '<span class="badge badge-gold">Contemplação</span>' : '—'}</td>
+      </tr>`;
+    }
+    return `<div class="card">
+      <div class="card-title">Amortização — Consórcio (meses ${start} a ${end})</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mês</th><th>Fase</th><th>Saldo Carta</th><th>Parcela</th><th>Evento</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  function tabelaFinanciamento() {
+    const fluxo = r.fluxoFin;
+    const end = Math.min(fluxo.length, parseInt(document.getElementById('amortEnd').value) || 24);
+    let rows = '';
+    for (let i = start - 1; i < end; i++) {
+      const f = fluxo[i];
+      rows += `<tr>
+        <td>${f.mes}</td>
+        <td>${fmt(f.saldo)}</td>
+        <td>${fmt(f.amort)}</td>
+        <td>${fmt(f.juros)}</td>
+        <td style="font-weight:700;">${fmt(f.parcela)}</td>
+      </tr>`;
+    }
+    return `<div class="card">
+      <div class="card-title">Amortização — Financiamento ${r.sistemaFin} (meses ${start} a ${end})</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mês</th><th>Saldo</th><th>Amortização</th><th>Juros</th><th>Parcela</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = tabelaConsorcio() + tabelaFinanciamento();
+}
+
 // ===========================
 // GRUPOS
 // ===========================
@@ -2019,12 +2133,35 @@ function exportExcel() {
 // ===========================
 // IMPRESSÃO
 // ===========================
-window.addEventListener('beforeprint', () => {
+// Prepara o documento para impressão: renderiza cada etapa (mesmo que o usuário
+// nunca tenha clicado na aba) e marca com .print-section apenas as etapas que
+// realmente têm informação cadastrada, para que só elas entrem no PDF.
+function prepararImpressao() {
   const el = document.getElementById('printDate');
   if (el) el.textContent = 'Gerado em ' + new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-  // Força recalculo para garantir dados atualizados no print
-  if (state.resultado) renderResultado();
-});
+
+  const temResultado = !!state.resultado;
+  if (temResultado) {
+    renderResultado();
+    renderComparativo();
+    renderAmortPrint();
+  }
+
+  const secoes = {
+    'tab-simulacao': true, // sempre tem parâmetros preenchidos (valores padrão)
+    'tab-grupos': state.grupos.length > 0,
+    'tab-comparativo': temResultado,
+    'tab-amortizacao': temResultado,
+    'tab-glossario': true // conteúdo de referência, sempre presente
+  };
+
+  Object.keys(secoes).forEach(id => {
+    const tab = document.getElementById(id);
+    if (tab) tab.classList.toggle('print-section', secoes[id]);
+  });
+}
+
+window.addEventListener('beforeprint', prepararImpressao);
 
 function imprimirSimulacao() {
   try {
