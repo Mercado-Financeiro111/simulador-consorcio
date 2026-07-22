@@ -1112,7 +1112,19 @@ function showTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   event.target.classList.add('active');
   if (name === 'comparativo' && state.resultado) renderComparativo();
-  if (name === 'amortizacao' && state.resultado) renderAmort();
+  if (name === 'amortizacao' && state.resultado) { autoFiltroAmort(); renderAmort(); }
+}
+
+// Preenche "De/Até" automaticamente com o prazo completo (do Consórcio ou do
+// Financiamento, conforme a modalidade selecionada) definido na Simulação —
+// evita que o usuário precise digitar o prazo manualmente para ver todas as
+// parcelas da amortização.
+function autoFiltroAmort() {
+  const r = state.resultado;
+  if (!r) return;
+  const fluxo = state.amortView === 'consorcio' ? r.fluxoConsorcio : r.fluxoFin;
+  document.getElementById('amortStart').value = 1;
+  document.getElementById('amortEnd').value = fluxo.length;
 }
 
 // ===========================
@@ -1145,6 +1157,7 @@ function setAmortView(v) {
   state.amortView = v;
   document.querySelectorAll('#amortViewGroup .toggle-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
+  autoFiltroAmort();
   renderAmort();
 }
 
@@ -1911,14 +1924,15 @@ function renderAmortPrint() {
         <td>${f.fase === 'pos' ? '<span class="badge badge-green">Pós</span>' : '<span class="badge badge-navy">Pré</span>'}</td>
         <td>${fmt(f.saldo)}</td>
         <td style="font-weight:700;">${fmt(f.parcela)}</td>
+        <td>${fmt(f.saldo - (fluxo[i+1]?.saldo || 0))}</td>
         <td>${f.mes === r.mesContemplacao ? '<span class="badge badge-gold">Contemplação</span>' : '—'}</td>
       </tr>`;
     }
     return `<div class="card">
-      <div class="card-title">Amortização — Consórcio (meses 1 a ${end}, período completo)</div>
+      <div class="card-title">Amortização — Consórcio (meses 1 a ${end}, período completo) | Mês contemplação: ${r.mesContemplacao}</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Mês</th><th>Fase</th><th>Saldo Carta</th><th>Parcela</th><th>Evento</th></tr></thead>
+          <thead><tr><th>Mês</th><th>Fase</th><th>Saldo Carta</th><th>Parcela</th><th>Amortização</th><th>Evento</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -1936,6 +1950,8 @@ function renderAmortPrint() {
         <td>${fmt(f.saldo)}</td>
         <td>${fmt(f.amort)}</td>
         <td>${fmt(f.juros)}</td>
+        <td>${fmt(f.dfi)}</td>
+        <td>${fmt(f.tarifa)}</td>
         <td style="font-weight:700;">${fmt(f.parcela)}</td>
       </tr>`;
     }
@@ -1943,7 +1959,7 @@ function renderAmortPrint() {
       <div class="card-title">Amortização — Financiamento ${r.sistemaFin} (meses 1 a ${end}, período completo)</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Mês</th><th>Saldo</th><th>Amortização</th><th>Juros</th><th>Parcela</th></tr></thead>
+          <thead><tr><th>Mês</th><th>Saldo</th><th>Amortização</th><th>Juros</th><th>DFI</th><th>Tarifa</th><th>Parcela Total</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
