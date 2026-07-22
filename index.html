@@ -306,6 +306,9 @@
 
   /* CHART CONTAINER */
   .chart-wrap { position: relative; height: 280px; }
+  /* Imagem (PNG) do gráfico gerada a partir do canvas, usada só na impressão —
+     alguns navegadores (ex. Safari) não rasterizam <canvas> corretamente no PDF. */
+  .print-chart-img { display: none; }
 
   /* AMORTIZATION PREVIEW */
   .amort-preview {
@@ -594,6 +597,16 @@
 
     /* === GRÁFICO === */
     .chart-wrap { height: 220px !important; }
+    /* Imprime a imagem (PNG) gerada do gráfico, não o <canvas> — em alguns
+       navegadores (ex. Safari/iOS) o canvas sai em branco na impressão. */
+    .chart-wrap canvas { display: none !important; }
+    .print-chart-img {
+      display: block !important;
+      position: absolute !important;
+      top: 0 !important; left: 0 !important;
+      width: 100% !important; height: 100% !important;
+      object-fit: contain !important;
+    }
 
     /* === ALERTS === */
     .alert { padding: 6px 10px !important; font-size: 9px !important; }
@@ -1508,6 +1521,7 @@ function renderResultado() {
       </div>
       <div class="chart-wrap">
         <canvas id="chartCusto" role="img" aria-label="Comparativo de custo total">Consórcio: ${fmt(r.custoTotalConsorcio)} | Financiamento: ${fmt(r.custoTotalFin)}</canvas>
+        <img id="chartCustoImg" class="print-chart-img" alt="Gráfico de Custo Total">
       </div>
     </div>`;
 
@@ -1548,19 +1562,40 @@ function destroyChart(id) {
   if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
 }
 
-// Espera o navegador terminar o layout (o canvas precisa de um tamanho definido
-// antes do Chart.js desenhar) e retorna uma Promise — permite aguardar o
-// desenho do gráfico antes de imprimir, em vez do setTimeout de tempo fixo.
-// Se "fn" falhar (ex.: Chart.js não carregou por instabilidade de rede), a
-// Promise ainda resolve — nunca deve travar o botão Imprimir.
-function afterLayout(fn) {
-  const layout = new Promise(resolve => {
+// Gera um PNG do gráfico já desenhado e guarda numa <img> escondida ao lado do
+// canvas — é essa imagem que a impressão mostra (ver .print-chart-img no CSS).
+// Alguns navegadores (Safari/iOS, entre outros) não rasterizam <canvas>
+// corretamente no PDF; uma <img> com os mesmos pixels sempre imprime certo,
+// independente de quando o print for disparado. Retorna uma Promise (espera
+// mais 2 frames) para que quem chamou saiba quando a imagem já está pronta.
+function snapshotChartParaImpressao(chartId, imgId) {
+  return new Promise(resolve => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      try { fn(); } catch (e) { console.error('Falha ao renderizar gráfico:', e); }
+      try {
+        const chart = chartInstances[chartId];
+        const img = document.getElementById(imgId);
+        if (chart && img) img.src = chart.toBase64Image('image/png', 1);
+      } catch (e) { console.error('Falha ao gerar imagem do gráfico para impressão:', e); }
       resolve();
     }));
   });
-  const timeout = new Promise(resolve => setTimeout(resolve, 1000));
+}
+
+// Espera o navegador terminar o layout (o canvas precisa de um tamanho definido
+// antes do Chart.js desenhar) e retorna uma Promise — permite aguardar o
+// desenho do gráfico (e a geração do PNG para impressão) antes de imprimir,
+// em vez do setTimeout de tempo fixo. "fn" pode retornar uma Promise (ex.:
+// snapshotChartParaImpressao) — ela também é aguardada aqui. Se "fn" falhar
+// (ex.: Chart.js não carregou por instabilidade de rede), a Promise ainda
+// resolve — nunca deve travar o botão Imprimir.
+function afterLayout(fn) {
+  const layout = new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
+      try { await fn(); } catch (e) { console.error('Falha ao renderizar gráfico:', e); }
+      resolve();
+    }));
+  });
+  const timeout = new Promise(resolve => setTimeout(resolve, 1500));
   return Promise.race([layout, timeout]);
 }
 
@@ -1617,6 +1652,8 @@ function renderChartCusto() {
       }
     }
   });
+
+  return snapshotChartParaImpressao('chartCusto', 'chartCustoImg');
 }
 
 // ===========================
@@ -1683,6 +1720,7 @@ function renderComparativo() {
       <div id="legendaComp" style="display:flex; gap:16px; margin-bottom:12px; font-size:12px; color:var(--text-muted);"></div>
       <div class="chart-wrap" style="height:320px;">
         <canvas id="chartComp" role="img" aria-label="Evolução do saldo devedor comparativo">Comparativo de saldo devedor ao longo do tempo.</canvas>
+        <img id="chartCompImg" class="print-chart-img" alt="Evolução do Saldo Devedor">
       </div>
     </div>
 
@@ -1690,14 +1728,12 @@ function renderComparativo() {
       <div class="card-title">Comparativo de Parcelas ao Longo do Tempo</div>
       <div class="chart-wrap" style="height:280px;">
         <canvas id="chartParcelas" role="img" aria-label="Evolução das parcelas mensais">Comparativo de parcelas mensais.</canvas>
+        <img id="chartParcelasImg" class="print-chart-img" alt="Comparativo de Parcelas ao Longo do Tempo">
       </div>
     </div>
   `;
 
-  return afterLayout(() => {
-    renderChartComparativo();
-    renderChartParcelas();
-  });
+  return afterLayout(() => Promise.all([renderChartComparativo(), renderChartParcelas()]));
 }
 
 function renderChartComparativo() {
@@ -1761,6 +1797,8 @@ function renderChartComparativo() {
       scales: { y: { ticks: { callback: v => 'R$' + (v/1000000).toFixed(1) + 'M' } } }
     }
   });
+
+  return snapshotChartParaImpressao('chartComp', 'chartCompImg');
 }
 
 function renderChartParcelas() {
@@ -1825,6 +1863,8 @@ function renderChartParcelas() {
       scales: { y: { ticks: { callback: v => 'R$' + (v/1000).toFixed(0) + 'k' } } }
     }
   });
+
+  return snapshotChartParaImpressao('chartParcelas', 'chartParcelasImg');
 }
 
 // ===========================
