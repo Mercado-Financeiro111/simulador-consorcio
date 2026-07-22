@@ -1534,6 +1534,14 @@ function renderResultado() {
 // ===========================
 // CHARTS
 // ===========================
+// Sem animação: o Chart.js por padrão anima o desenho ao longo de ~1s, e a
+// impressão só espera 2 frames (afterLayout) depois de criar o gráfico — com
+// animação ligada, o PDF capturava o gráfico praticamente em branco, no
+// início da animação. Sem animação, o gráfico já sai completo no 1º frame.
+// (guardado com typeof: se o CDN do Chart.js falhar, o resto do app continua
+// funcionando normalmente, só sem os gráficos — como já era o caso antes)
+if (typeof Chart !== 'undefined') { Chart.defaults.animation = false; }
+
 let chartInstances = {};
 
 function destroyChart(id) {
