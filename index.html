@@ -521,9 +521,18 @@
     .verdict h2 { font-size: 13px !important; }
     .verdict p { font-size: 10px !important; }
 
-    /* Amortização: usa a versão combinada (consórcio + financiamento) montada para impressão */
+    /* Amortização: usa a versão combinada (consórcio + financiamento) montada para impressão,
+       com o período completo — por isso as tabelas podem ocupar várias páginas. */
     #amortContent { display: none !important; }
     #amortPrintContent { display: block !important; }
+    /* Essas tabelas são longas (período todo): permitir quebra de página entre linhas,
+       mas nunca no meio de uma linha, e repetir o cabeçalho em cada página. */
+    #amortPrintContent .card { break-inside: auto !important; page-break-inside: auto !important; }
+    #amortPrintContent table { page-break-inside: auto !important; }
+    #amortPrintContent thead { display: table-header-group; }
+    #amortPrintContent tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+    /* Financiamento começa em página nova, depois da tabela completa do Consórcio */
+    #amortPrintContent .card + .card { page-break-before: always !important; }
 
     /* === CARDS: nunca quebram no meio === */
     .card {
@@ -631,7 +640,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button type="button" class="btn btn-outline" id="btnImprimir" onclick="imprimirSimulacao()">
+      <button type="button" class="btn btn-outline" id="btnImprimir" onclick="imprimirSimulacao()" title="Dica: na janela de impressão, em 'Mais configurações', desmarque 'Cabeçalhos e rodapés' para o PDF sair sem a URL da página.">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Imprimir
       </button>
@@ -1506,7 +1515,7 @@ function renderResultado() {
     </div>`;
 
   // Render chart
-  setTimeout(() => renderChartCusto(), 100);
+  return afterLayout(renderChartCusto);
 }
 
 // ===========================
@@ -1516,6 +1525,22 @@ let chartInstances = {};
 
 function destroyChart(id) {
   if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+// Espera o navegador terminar o layout (o canvas precisa de um tamanho definido
+// antes do Chart.js desenhar) e retorna uma Promise — permite aguardar o
+// desenho do gráfico antes de imprimir, em vez do setTimeout de tempo fixo.
+// Se "fn" falhar (ex.: Chart.js não carregou por instabilidade de rede), a
+// Promise ainda resolve — nunca deve travar o botão Imprimir.
+function afterLayout(fn) {
+  const layout = new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      try { fn(); } catch (e) { console.error('Falha ao renderizar gráfico:', e); }
+      resolve();
+    }));
+  });
+  const timeout = new Promise(resolve => setTimeout(resolve, 1000));
+  return Promise.race([layout, timeout]);
 }
 
 function renderChartCusto() {
@@ -1648,10 +1673,10 @@ function renderComparativo() {
     </div>
   `;
 
-  setTimeout(() => {
+  return afterLayout(() => {
     renderChartComparativo();
     renderChartParcelas();
-  }, 100);
+  });
 }
 
 function renderChartComparativo() {
@@ -1865,19 +1890,20 @@ function renderAmort() {
 
 // Monta, para impressão, as tabelas de amortização de Consórcio e Financiamento
 // juntas (independente de qual das duas esteja selecionada na tela).
+// Monta as tabelas de amortização para o PDF com TODO o período de cada
+// modalidade (não usa o filtro "De/Até" da tela — este é só para a visualização
+// interativa da aba Amortização).
 function renderAmortPrint() {
   const el = document.getElementById('amortPrintContent');
   if (!el) return;
   const r = state.resultado;
   if (!r) { el.innerHTML = ''; return; }
 
-  const start = Math.max(1, parseInt(document.getElementById('amortStart').value) || 1);
-
   function tabelaConsorcio() {
     const fluxo = r.fluxoConsorcio;
-    const end = Math.min(fluxo.length, parseInt(document.getElementById('amortEnd').value) || 24);
+    const end = fluxo.length;
     let rows = '';
-    for (let i = start - 1; i < end; i++) {
+    for (let i = 0; i < end; i++) {
       const f = fluxo[i];
       const classe = f.fase === 'pos' ? 'gold-row' : '';
       rows += `<tr class="${classe}">
@@ -1889,7 +1915,7 @@ function renderAmortPrint() {
       </tr>`;
     }
     return `<div class="card">
-      <div class="card-title">Amortização — Consórcio (meses ${start} a ${end})</div>
+      <div class="card-title">Amortização — Consórcio (meses 1 a ${end}, período completo)</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Mês</th><th>Fase</th><th>Saldo Carta</th><th>Parcela</th><th>Evento</th></tr></thead>
@@ -1901,9 +1927,9 @@ function renderAmortPrint() {
 
   function tabelaFinanciamento() {
     const fluxo = r.fluxoFin;
-    const end = Math.min(fluxo.length, parseInt(document.getElementById('amortEnd').value) || 24);
+    const end = fluxo.length;
     let rows = '';
-    for (let i = start - 1; i < end; i++) {
+    for (let i = 0; i < end; i++) {
       const f = fluxo[i];
       rows += `<tr>
         <td>${f.mes}</td>
@@ -1914,7 +1940,7 @@ function renderAmortPrint() {
       </tr>`;
     }
     return `<div class="card">
-      <div class="card-title">Amortização — Financiamento ${r.sistemaFin} (meses ${start} a ${end})</div>
+      <div class="card-title">Amortização — Financiamento ${r.sistemaFin} (meses 1 a ${end}, período completo)</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Mês</th><th>Saldo</th><th>Amortização</th><th>Juros</th><th>Parcela</th></tr></thead>
@@ -2136,14 +2162,17 @@ function exportExcel() {
 // Prepara o documento para impressão: renderiza cada etapa (mesmo que o usuário
 // nunca tenha clicado na aba) e marca com .print-section apenas as etapas que
 // realmente têm informação cadastrada, para que só elas entrem no PDF.
-function prepararImpressao() {
+// É assíncrona porque os gráficos (Chart.js) só desenham depois que o navegador
+// calcula o layout do canvas — precisamos aguardar isso antes de imprimir,
+// senão os gráficos de Comparativo saem em branco no PDF.
+async function prepararImpressao() {
   const el = document.getElementById('printDate');
   if (el) el.textContent = 'Gerado em ' + new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
   const temResultado = !!state.resultado;
   if (temResultado) {
-    renderResultado();
-    renderComparativo();
+    await renderResultado();
+    await renderComparativo();
     renderAmortPrint();
   }
 
@@ -2161,10 +2190,15 @@ function prepararImpressao() {
   });
 }
 
-window.addEventListener('beforeprint', prepararImpressao);
+// Fallback para impressão disparada fora do botão (Ctrl+P, menu do navegador):
+// o evento 'beforeprint' não espera Promises, então essa via não tem garantia
+// total contra a corrida dos gráficos — por isso o botão Imprimir (abaixo) é o
+// caminho recomendado.
+window.addEventListener('beforeprint', () => { prepararImpressao(); });
 
-function imprimirSimulacao() {
+async function imprimirSimulacao() {
   try {
+    await prepararImpressao();
     window.print();
   } catch (e) {
     // window.print() é bloqueado em alguns visualizadores embutidos (ex.: preview em iframe).
