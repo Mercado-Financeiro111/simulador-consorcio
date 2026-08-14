@@ -514,6 +514,10 @@
        então nenhum card sai cortado no meio). */
     #tab-simulacao > * { page-break-before: avoid; break-before: avoid; }
 
+    /* Exceção: dados do Consórcio (Parâmetros + Lance + Resultado) numa
+       página, dados do Financiamento (Comparativo + Resultado) noutra. */
+    #linhaFinanciamento { page-break-before: always !important; break-before: page !important; }
+
     /* === COMPARATIVO: consórcio e financiamento lado a lado na mesma página === */
     .scenario-cols {
       display: grid !important;
@@ -555,15 +559,15 @@
     }
 
     /* === GRIDS === */
-    /* .grid-2 vira bloco (empilhado) na impressão: o Chromium tem um bug
+    /* .grid-2 usa flex (não grid) na impressão: o Chromium tem um bug
        conhecido onde break-inside:avoid de um .card não é respeitado quando
-       o pai dele é item de um grid (o card chega a ser cortado no meio de
-       uma linha de texto). .grid-2 é usado nas duas linhas de cards lado a
-       lado da Simulação e no Glossário — nesses casos empilhar é o preço
-       para nunca cortar um card. */
-    .grid-2 { display: block !important; }
-    .grid-2 > * { margin-bottom: 10px !important; }
-    .grid-2 > *:last-child { margin-bottom: 0 !important; }
+       o pai dele é item de um grid CSS (o card chega a ser cortado no meio
+       de uma linha de texto) — testado e confirmado que com display:flex
+       isso não acontece. flex-wrap faz 2 itens ficarem lado a lado (linhas
+       de cards) e 4 itens (grids de métricas) quebrarem em 2×2, replicando
+       o layout original de grid-template-columns: 1fr 1fr. */
+    .grid-2 { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; margin-bottom: 10px !important; }
+    .grid-2 > * { flex: 1 1 calc(50% - 5px) !important; min-width: 0 !important; }
     .grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
     .grid-4 { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 7px !important; }
 
