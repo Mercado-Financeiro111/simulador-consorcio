@@ -137,6 +137,14 @@
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
+  /* Com o interruptor "Comparar Financiamento" desligado, esses blocos ficam
+     escondidos em qualquer contexto — inclusive na impressão, onde a regra
+     ".grid-2 { display: grid !important; }" do @media print teria prioridade
+     sobre um display:none inline (por isso a especificidade extra aqui). */
+  body.financiamento-off #linhaFinanciamento,
+  body.financiamento-off #graficoCustoCol,
+  body.financiamento-off #economiaCol { display: none !important; }
+
   /* CARD */
   .card {
     background: var(--bg-card);
@@ -1157,6 +1165,14 @@ function toggleCompararFinanciamento() {
 
 function aplicarModoComparacao() {
   const on = state.compararFinanciamento;
+
+  // Fonte de verdade para o CSS de impressão: os elementos ligados ao
+  // financiamento (ex. #linhaFinanciamento) têm class="grid-2", e a regra de
+  // impressão ".grid-2 { display: grid !important; }" tem prioridade sobre um
+  // display:none inline — por isso escondê-los só via JS/inline não bastava
+  // para o PDF. Esta classe no <body> tem especificidade maior e vale tanto
+  // na tela quanto na impressão (ver CSS "body.financiamento-off ...").
+  document.body.classList.toggle('financiamento-off', !on);
 
   const switchEl = document.getElementById('switchComparar');
   if (switchEl) switchEl.classList.toggle('active', on);
