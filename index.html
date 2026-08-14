@@ -474,9 +474,9 @@
     /* Suprime URL e título do browser no cabeçalho/rodapé da página */
     @page {
       size: A4 portrait;
-      margin: 14mm 12mm 14mm 12mm;
+      margin: 18mm 16mm 18mm 16mm;
     }
-    @page :first { margin-top: 10mm; }
+    @page :first { margin-top: 14mm; }
 
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
@@ -611,17 +611,33 @@
     .savings-amount { font-size: 22px !important; }
 
     /* === GRÁFICO === */
-    .chart-wrap { height: 220px !important; }
+    .chart-wrap {
+      height: auto !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+      text-align: center;
+    }
     /* Imprime a imagem (PNG) gerada do gráfico, não o <canvas> — em alguns
        navegadores (ex. Safari/iOS) o canvas sai em branco na impressão. */
     .chart-wrap canvas { display: none !important; }
+    /* Imagem em fluxo normal (não position:absolute + object-fit): o motor de
+       geração de PDF do Chromium não renderiza esse combo de forma confiável
+       — a imagem saía cortada/em branco mesmo cabendo dentro da margem.
+       Uma <img> simples com max-width sempre funciona. */
     .print-chart-img {
-      display: block !important;
-      position: absolute !important;
-      top: 0 !important; left: 0 !important;
-      width: 100% !important; height: 100% !important;
-      object-fit: contain !important;
+      display: inline-block !important;
+      position: static !important;
+      width: auto !important;
+      max-width: 100% !important;
+      height: auto !important;
+      max-height: 220px !important;
     }
+
+    /* === EVITA QUALQUER CONTEÚDO CORTAR NA BORDA DA PÁGINA === */
+    /* (não inclui .table-wrap: tabelas longas usam overflow:visible de propósito,
+       ver "=== TABELAS ===" acima — aqui é só para imagens/gráficos/cards) */
+    img, svg, canvas, table { max-width: 100% !important; }
+    .card, .main { overflow-x: hidden !important; }
 
     /* === ALERTS === */
     .alert { padding: 6px 10px !important; font-size: 9px !important; }
