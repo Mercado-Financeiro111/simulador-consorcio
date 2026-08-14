@@ -506,21 +506,13 @@
     body { background: #fff !important; font-size: 11px !important; margin: 0 !important; }
     .main { padding: 0 !important; max-width: 100% !important; }
 
-    /* === QUEBRAS DE PÁGINA POR SEÇÃO (dentro da aba Simulação) === */
-    /* Parâmetros + Lance: página 1 (sem quebra antes) */
-    #tab-simulacao > .grid-2:first-child { page-break-before: avoid; }
-
-    /* Resultado Consórcio: nova página */
-    #resultadoConsorcioCol { page-break-before: always !important; }
-
-    /* Financiamento + Resultado Financiamento: nova página */
-    #tab-simulacao > .grid-2:nth-child(3) { page-break-before: always !important; }
-
-    /* Gráfico: nova página */
-    #graficoCustoCol { page-break-before: always !important; }
-
-    /* Banner economia: junto ao gráfico (sem quebra) */
-    #economiaCol { page-break-before: avoid; }
+    /* === LAYOUT DA ABA SIMULAÇÃO: fluxo natural, sem quebra de página forçada === */
+    /* Antes, cada bloco (Resultado, Financiamento, Gráfico) começava numa
+       página nova — com o comparativo desligado (poucos blocos), isso deixava
+       páginas quase em branco. Agora os blocos só quebram página quando o
+       conteúdo realmente não cabe mais (cada .card já tem break-inside:avoid,
+       então nenhum card sai cortado no meio). */
+    #tab-simulacao > * { page-break-before: avoid; break-before: avoid; }
 
     /* === COMPARATIVO: consórcio e financiamento lado a lado na mesma página === */
     .scenario-cols {
@@ -1661,13 +1653,28 @@ function destroyChart(id) {
 // corretamente no PDF; uma <img> com os mesmos pixels sempre imprime certo,
 // independente de quando o print for disparado. Retorna uma Promise (espera
 // mais 2 frames) para que quem chamou saiba quando a imagem já está pronta.
-function snapshotChartParaImpressao(chartId, imgId) {
+//
+// chart.resize(w, h) força um tamanho explícito antes de tirar a "foto":
+// quando a impressão é preparada com o usuário em outra aba, o container do
+// gráfico ainda está com display:none (só troca depois, com window.print()),
+// e sem um tamanho explícito o canvas fica 0×0 — a imagem gerada sai
+// quebrada. (Chegamos a tentar deixar o container temporariamente visível
+// fora da tela para contornar isso, mas até um position:absolute com
+// deslocamento grande, mesmo sem ser usado em nenhum elemento, corrompeu a
+// paginação do PDF gerado depois — por isso preferimos resize() explícito,
+// que não mexe em nada do layout da página.) Depois da foto, resize() sem
+// argumentos devolve o gráfico ao tamanho automático/responsivo de sempre.
+function snapshotChartParaImpressao(chartId, imgId, printWidth = 680, printHeight = 260) {
   return new Promise(resolve => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       try {
         const chart = chartInstances[chartId];
         const img = document.getElementById(imgId);
-        if (chart && img) img.src = chart.toBase64Image('image/png', 1);
+        if (chart && img) {
+          chart.resize(printWidth, printHeight);
+          img.src = chart.toBase64Image('image/png', 1);
+          chart.resize();
+        }
       } catch (e) { console.error('Falha ao gerar imagem do gráfico para impressão:', e); }
       resolve();
     }));
@@ -2335,11 +2342,6 @@ async function prepararImpressao() {
 
   const temResultado = !!state.resultado;
   const comparar = state.compararFinanciamento;
-  if (temResultado) {
-    await renderResultado();
-    if (comparar) await renderComparativo();
-    renderAmortPrint();
-  }
 
   const secoes = {
     'tab-simulacao': true, // sempre tem parâmetros preenchidos (valores padrão)
@@ -2353,6 +2355,12 @@ async function prepararImpressao() {
     const tab = document.getElementById(id);
     if (tab) tab.classList.toggle('print-section', secoes[id]);
   });
+
+  if (temResultado) {
+    await renderResultado();
+    if (comparar) await renderComparativo();
+    renderAmortPrint();
+  }
 }
 
 // Fallback para impressão disparada fora do botão (Ctrl+P, menu do navegador):
