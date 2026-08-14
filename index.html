@@ -481,9 +481,13 @@
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
     /* Ocultar elementos de navegação e controle */
+    /* #fieldReajusteCustom NÃO entra aqui: ele já tem seu próprio display
+       (block/none) alternado pelo select #reajuste — forçar display:none
+       escondia a taxa personalizada do índice de correção mesmo quando
+       "Personalizado" estava selecionado. */
     header, .tabs, .header-actions, .calc-btn,
     #btnExportExcel, .toggle-group, #alertEntradaFin,
-    #fieldReajusteCustom, #cardAdicionarGrupo, #amortFiltroCard { display: none !important; }
+    #cardAdicionarGrupo, #amortFiltroCard { display: none !important; }
 
     /* Mostrar cabeçalho de impressão */
     #printHeader { display: block !important; }
